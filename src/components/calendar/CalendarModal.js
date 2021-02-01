@@ -1,46 +1,67 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+
 import Modal from "react-modal";
 import DateTimePicker from "react-datetime-picker";
 import Swal from "sweetalert2";
 import moment from "moment";
 
 import { customStyles } from "../../helpers/modal-styles";
-import { useDispatch, useSelector } from "react-redux";
 import { uiCloseModal } from "../../actions/ui";
+import {
+  eventAddNew,
+  eventClearActiveEvent,
+  eventUpdated,
+} from "../../actions/events";
 
 Modal.setAppElement("#root");
 
 const now = moment().minutes(0).seconds(0).add(1, "hours");
 const nowPlus = now.clone().add(1, "hours");
 
+const initEvent = {
+  title: "",
+  notes: "",
+  start: now.toDate(),
+  finish: nowPlus.toDate(),
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////
 
 export const CalendarModal = () => {
   const { modalOpen } = useSelector((state) => state.ui);
+  const { activeEvent } = useSelector((state) => state.calendar);
+
   const dispatch = useDispatch();
 
   const [dateStart, setDateStart] = useState(now.toDate());
   const [dateFinish, setDateFinish] = useState(nowPlus.toDate());
   const [titleValid, setTitleValid] = useState(true);
 
-  const [formValues, setFormValues] = useState({
-    title: "Evento",
-    notes: "",
-    start: now.toDate(),
-    finish: nowPlus.toDate(),
-  });
+  const [formValues, setFormValues] = useState(initEvent);
 
   const { title, notes, start, finish } = formValues;
 
+  useEffect(() => {
+    if (activeEvent) {
+      setFormValues(activeEvent);
+    } else {
+      setFormValues(initEvent);
+    }
+  }, [activeEvent, setFormValues]);
+
   /////////////////////////////
-  const closeModal = () => {
-    dispatch(uiCloseModal());
-  };
   const handleInputChange = ({ target }) => {
     setFormValues({
       ...formValues,
       [target.name]: target.value,
     });
+  };
+
+  const closeModal = () => {
+    dispatch(uiCloseModal());
+    dispatch(eventClearActiveEvent());
+    setFormValues(initEvent);
   };
 
   const handleStartDateChange = (e) => {
@@ -74,27 +95,35 @@ export const CalendarModal = () => {
     if (title.trim().length < 2) {
       return setTitleValid(false);
     }
-    setTitleValid();
-    /*  closeModal(); */
+    if (activeEvent) {
+      dispatch(eventUpdated(formValues));
+    } else {
+      dispatch(
+        eventAddNew({
+          ...formValues,
+          id: new Date().getTime(),
+          user: {
+            _id: "123",
+            name: "Fernando",
+          },
+        })
+      );
+    }
+    setTitleValid(true);
+    closeModal();
   };
-  /////////////////////////////////
 
-  /*  const [isOpen, setIsOpen] = useState(true);
-  const closeModal = () => {
-    setIsOpen(false);
-  }; */
   return (
     <Modal
       isOpen={modalOpen}
-      /* onAfterOpen={afterOpenModal}*/
       onRequestClose={closeModal}
       style={customStyles}
       closeTimeoutMS={300}
       className="modal"
       overlayClassName="modal-fondo"
     >
-      <h4> Nuevo evento </h4>
-      <form className="container" onChange={handleSubmitForm}>
+      <h4> {activeEvent ? "Editar evento" : "Nuevo evento"}</h4>
+      <form className="container" onSubmit={handleSubmitForm}>
         <div className="form-group">
           <label>Fecha y hora inicio</label>
           <br />
@@ -123,9 +152,10 @@ export const CalendarModal = () => {
             type="text"
             className={`form-control ${!titleValid && "is-invalid"}`}
             placeholder="Título del evento"
-            name={title}
+            value={title}
             onChange={handleInputChange}
             autoComplete="off"
+            name="title"
           />
           <small id="emailHelp" className="form-text text-muted">
             Una descripción corta
@@ -138,7 +168,8 @@ export const CalendarModal = () => {
             className="form-control"
             placeholder="Notas"
             rows="2"
-            name={notes}
+            value={notes}
+            name="notes"
             onChange={handleInputChange}
           ></textarea>
           <small id="emailHelp" className="form-text text-muted">

@@ -57,3 +57,9 @@
   position: fixed;
   right: 1.3rem;
 }
+.fab-danger {
+  bottom: 2rem;
+  left: 1.3rem;
+  padding: 1rem;
+  position: fixed;
+}

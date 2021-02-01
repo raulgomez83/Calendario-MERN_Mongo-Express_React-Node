@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { Calendar, momentLocalizer } from "react-big-calendar";
-
 import moment from "moment";
 import "moment/locale/es";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -12,39 +11,35 @@ import { Navbar } from "../ui/Navbar";
 import { CalendarEvent } from "./CalendarEvent";
 import { CalendarModal } from "./CalendarModal";
 import { uiOpenModal } from "../../actions/ui";
-import { eventSetActive } from "../../actions/events";
+import { eventClearActiveEvent, eventSetActive } from "../../actions/events";
 import { AddNewFab } from "../ui/AddNewFab";
+import { DeleteEventFab } from "../ui/DeleteEventFab";
 
 moment.locale("es");
 
 const localizer = momentLocalizer(moment);
-const events = [
-  {
-    title: "Cumple",
-    start: moment().toDate(),
-    end: moment().add(2, "hours").toDate(),
-    bgcolor: "#fabada",
-    notes: "Comprar regalo",
-    user: { _id: "123", name: "Manolo" },
-  },
-];
 
 export const CalendarScreen = () => {
   const dispatch = useDispatch();
+  const { events, activeEvent } = useSelector((state) => state.calendar);
+
   const [lastView, setlastView] = useState(
     localStorage.getItem("lastView") || "month"
   );
 
   const onDoubleClick = (e) => {
+    console.log("holi");
     dispatch(uiOpenModal());
   };
   const onSelectEvent = (e) => {
     dispatch(eventSetActive(e));
-    dispatch(uiOpenModal());
   };
   const onViewChange = (e) => {
     setlastView(e);
     localStorage.setItem("lastView", e);
+  };
+  const onSelectedSlot = (e) => {
+    dispatch(eventClearActiveEvent());
   };
 
   const eventStyleGetter = (event, start, end, isSelected) => {
@@ -64,17 +59,21 @@ export const CalendarScreen = () => {
         localizer={localizer}
         events={events}
         startAccessor="start"
-        endAccessor="end"
+        endAccessor="finish"
         style={{ height: 500 }}
         messages={messages}
         eventPropGetter={eventStyleGetter}
         onDoubleClickEvent={onDoubleClick}
         onSelectEvent={onSelectEvent}
         onView={onViewChange}
+        onSelectSlot={onSelectedSlot}
+        selectable={true}
         view={lastView}
         components={{ event: CalendarEvent }}
       />
       <AddNewFab />
+      {activeEvent && <DeleteEventFab />}
+
       <CalendarModal />
     </div>
   );
